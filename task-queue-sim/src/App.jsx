@@ -17,7 +17,7 @@ const INITIAL_REGULAR_QUEUES = [
 ];
 
 const getTotalDuration = (tasks) =>
-  tasks.reduce((sum, task) => sum + task.duration, 0);
+  tasks.reduce((sum, task) => sum + task.remaining, 0);
 
 const tickQueue = (tasks) => {
   if (tasks.length === 0) return tasks;
@@ -28,7 +28,7 @@ const tickQueue = (tasks) => {
   }
 
   return [{ ...head, remaining: head.remaining - 1 }, ...rest];
-}
+};
 
 export default function App() {
   const [waitingTasks, setWaitingTasks] = useState([]);
@@ -36,12 +36,12 @@ export default function App() {
   const [regularQueues, setRegularQueues] = useState(INITIAL_REGULAR_QUEUES);
   const [nextTaskId, setNextTaskId] = useState(1);
 
-  // Countdown Timer
-  useEffect(() => {
-    const hasActiveTasks =
-      highPriorityQueue.length > 0 ||
-      regularQueues.some((queue) => queue.tasks.length > 0);
+  const hasActiveTasks =
+    highPriorityQueue.length > 0 ||
+    regularQueues.some((queue) => queue.tasks.length > 0);
 
+  // countdown timer while any service queue has active tasks
+  useEffect(() => {
     if (!hasActiveTasks) return;
 
     const timerId = setInterval(() => {
@@ -55,7 +55,7 @@ export default function App() {
     }, TICK_INTERVAL_MS);
 
     return () => clearInterval(timerId);
-  }, [highPriorityQueue, regularQueues]);
+  }, [hasActiveTasks]);
 
   // Append a new task immutably
   const handleAddRandomTask = () => {
@@ -65,6 +65,7 @@ export default function App() {
     const newTask = {
       id: nextTaskId,
       duration,
+      remaining: duration,
       priority,
     };
 
