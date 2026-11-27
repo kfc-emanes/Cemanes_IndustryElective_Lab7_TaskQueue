@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import TaskControls from './components/TaskControls';
 import WaitingQueue from './components/WaitingQueue';
 import ServiceQueue from './components/ServiceQueue';
@@ -7,6 +7,8 @@ import './App.css';
 // This is specifically for the checks to change the probability of high priority queue numbers
 // appearing
 const HIGH_PRIORITY_PROBABILITY = 0.3;
+// And this is used for counting down the duration per unit
+const TICK_INTERVAL_MS = 50;
 
 const INITIAL_REGULAR_QUEUES = [
   { id: 2, title: 'Regular Queue 2', tasks: [] },
@@ -17,11 +19,43 @@ const INITIAL_REGULAR_QUEUES = [
 const getTotalDuration = (tasks) =>
   tasks.reduce((sum, task) => sum + task.duration, 0);
 
+const tickQueue = (tasks) => {
+  if (tasks.length === 0) return tasks;
+
+  const [head, ...rest] = tasks;
+  if (head.remaining <= 1) {
+    return rest;
+  }
+
+  return [{ ...head, remaining: head.remaining - 1 }, ...rest];
+}
+
 export default function App() {
   const [waitingTasks, setWaitingTasks] = useState([]);
   const [highPriorityQueue, setHighPriorityQueue] = useState([]);
   const [regularQueues, setRegularQueues] = useState(INITIAL_REGULAR_QUEUES);
   const [nextTaskId, setNextTaskId] = useState(1);
+
+  // Countdown Timer
+  useEffect(() => {
+    const hasActiveTasks =
+      highPriorityQueue.length > 0 ||
+      regularQueues.some((queue) => queue.tasks.length > 0);
+
+    if (!hasActiveTasks) return;
+
+    const timerId = setInterval(() => {
+      setHighPriorityQueue((prev) => tickQueue(prev));
+      setRegularQueues((prevQueues) =>
+        prevQueues.map((queue) => ({
+          ...queue,
+          tasks: tickQueue(queue.tasks),
+        }))
+      );
+    }, TICK_INTERVAL_MS);
+
+    return () => clearInterval(timerId);
+  }, [highPriorityQueue, regularQueues]);
 
   // Append a new task immutably
   const handleAddRandomTask = () => {
